@@ -1,0 +1,6 @@
+org\acme\repository\TransactionRepository.class
+META-INF\panache-archive.marker
+org\acme\api\TransactionResource.class
+org\acme\transaction\model\Transaction.class
+org\acme\transaction\model\TxType.class
+org\acme\GreetingResource.class
