@@ -1,0 +1,2472 @@
+SEMANA 4
+SQL Server Indexes
+
+Los índices son estructuras de datos especiales asociadas con tablas o vistas que ayudan a acelerar la consulta. SQL Server proporciona dos tipos de índices: índice agrupado e índice no agrupado.
+
+SQL Server Clustered Indexes
+https://www.sqlservertutorial.net/sql-server-indexes/sql-server-clustered-indexes/
+
+Un índice agrupado almacena filas de datos en una estructura ordenada según sus valores clave. Cada tabla tiene solo un índice agrupado porque las filas de datos solo se pueden ordenar en un orden. Una tabla que tiene un índice agrupado se denomina tabla agrupada.
+
+Un índice agrupado organiza los datos mediante un llamado árbol B estructurado especial (o árbol equilibrado) que permite búsquedas, inserciones, actualizaciones y eliminaciones en un tiempo amortizado logarítmico.
+
+En esta estructura, el nodo superior del árbol B se denomina nodo raíz . Los nodos del nivel inferior se denominan nodos hoja . Cualquier nivel de índice entre los nodos raíz y hoja se conoce como nivel intermedio.
+
+En el árbol B, el nodo raíz y los nodos de nivel intermedio contienen páginas de índice que contienen filas de índice. Los nodos hoja contienen las páginas de datos de la tabla subyacente. Las páginas de cada nivel del índice están enlazadas mediante otra estructura denominada lista doblemente enlazada.
+
+Cuando crea una tabla con una clave principal , SQL Server crea automáticamente un índice agrupado correspondiente que incluye columnas de clave principal.
+
+Si agrega una restricción de clave principal a una tabla existente que ya tiene un índice agrupado, SQL Server aplicará la clave principal mediante un índice no agrupado:
+
+Cuando una tabla no tiene una clave principal, lo cual es muy raro, puede usar la CREATE CLUSTERED INDEXdeclaración para agregarle un índice agrupado.
+
+CREATE CLUSTERED INDEX ix_parts_id
+ON production.parts (part_id);  
+
+----
+https://www.sqlservertutorial.net/sql-server-indexes/sql-server-create-index/
+SQL Server non-clustered indexes
+
+Un índice no agrupado es una estructura de datos que mejora la velocidad de recuperación de datos de las tablas. A diferencia de un índice agrupado , un índice no agrupado ordena y almacena los datos por separado de las filas de datos de la tabla. Es una copia de columnas seleccionadas de datos de una tabla con los enlaces a la tabla asociada.
+
+Similar a un índice agrupado, un índice no agrupado utiliza la estructura de árbol B para organizar sus datos.
+
+Una tabla puede tener uno o más índices no agrupados y cada índice no agrupado puede incluir una o más columnas de la tabla.
+
+Además de almacenar los valores clave del índice, los nodos hoja también almacenan punteros de fila a las filas de datos que contienen los valores clave. Estos punteros de fila también se conocen como localizadores de fila.
+
+Si la tabla subyacente es una tabla agrupada, el puntero de fila es la clave del índice agrupado. En caso de que la tabla subyacente sea un montón, el puntero de fila apunta a la fila de la tabla.
+
+CREATE [NONCLUSTERED] INDEX index_name
+ON table_name(column_list);
+
+[NONCLUSTERED] es opcional
+CREATE INDEX ix_customers_city
+ON sales.customers(city);
+
+Cuando crea un índice no agrupado que consta de varias columnas, el orden de las columnas en el índice es muy importante. Debe colocar las columnas que utiliza con frecuencia para consultar datos al principio de la lista de columnas.
+
+Por lo tanto, es una buena práctica colocar las columnas que usa con frecuencia para consultar datos al principio de la lista de columnas del índice.
+
+------
+https://www.sqlservertutorial.net/sql-server-indexes/sql-server-rename-index/
+SQL Server Rename Index
+
+The sp_rename is a system stored procedure that allows you to rename any user-created object in the current database including table, index, and column.
+
+EXEC sp_rename 
+    index_name, 
+    new_index_name, 
+    N'INDEX';  
+EXEC sp_rename 
+    @objname = N'index_name', 
+    @newname = N'new_index_name',   
+    @objtype = N'INDEX';
+
+EXEC sp_rename 
+        @objname = N'sales.customers.ix_customers_city',
+        @newname = N'ix_cust_city' ,
+        @objtype = N'INDEX';
+
+
+-----
+https://www.sqlservertutorial.net/sql-server-indexes/sql-server-disable-indexes/
+SQL Server Disable Indexes
+deshabilitar un indice
+
+ALTER INDEX index_name
+ON table_name
+DISABLE;
+
+deshabilitar todos los indices
+
+ALTER INDEX ALL ON table_name
+DISABLE;
+
+If you disable an index, the query optimizer will not consider that disabled index for creating query execution plans.
+
+When you disable an index on a table, SQL Server keeps the index definition in the metadata and the index statistics in nonclustered indexes. However, if you disable a nonclustered or clustered index on a view, SQL Server will physically delete all the index data.
+
+If you disable a clustered index of a table, you cannot access the table data using data manipulation language such as SELECT, INSERT, UPDATE, and DELETE until you rebuild or drop the index.
+
+SELECT * FROM sales.customers;
+
+devuelve>
+The query processor is unable to produce a plan because the index 'PK__customer__CD65CB855363011F' on table or view 'customers' is disabled.
+
+-------
+https://www.sqlservertutorial.net/sql-server-indexes/sql-server-enable-indexes/
+SQL Server Enable Indexes
+
+Sometimes, you need to disable an index before doing a large update on a table. By disabling the index, you can speed up the update process by avoiding the index writing overhead.
+
+After completing the update to the table, you need to enable the index. Since the index was disabled, you can rebuild the index but cannot just simply enable it. Because after the update operation, the index needs to be rebuilt to reflect the new data in the table.
+
+ALTER INDEX index_name 
+ON table_name  
+REBUILD;
+
+This statement uses the CREATE INDEX statement to enable the disabled index and recreate it:
+
+
+
+CREATE INDEX index_name 
+ON table_name(column_list)
+WITH(DROP_EXISTING=ON)
+
+Enable indexes using DBCC DBREINDEX statement
+DBCC DBREINDEX (table_name, index_name);
+
+-------
+https://www.sqlservertutorial.net/sql-server-indexes/sql-server-unique-index/
+SQL Server Unique Index
+
+A unique index ensures the index key columns do not contain any duplicate values.
+
+A unique index may consist of one or many columns. If a unique index has one column, the values in this column will be unique. In case the unique index has multiple columns, the combination of values in these columns is unique.
+
+Any attempt to insert or update data into the unique index key columns that causes the duplicate will result in an error.
+
+A unique index can be clustered or non-clustered.
+
+CREATE UNIQUE INDEX index_name
+ON table_name(column_list);
+
+CREATE UNIQUE INDEX ix_cust_email 
+ON sales.customers(email);
+
+INSERT INTO t1(a,b) VALUES(1,1);
+
+INSERT INTO t1(a,b) VALUES(1,2);
+INSERT INTO t1(a,b) VALUES(1,2);
+
+Cannot insert duplicate key row in object 'dbo.t1' with unique index 'ix_ab'. The duplicate key value is (1, 2).
+
+-- SQL Server unique index and NULL
+
+NULL is even not equal to itself. However, when it comes to unique index, SQL Server treats NULL values the same. It means that if you create a unique index on a nullable column, you can only have only one NULL value in this column.
+
+--***
+Unique index vs. UNIQUE constraint
+Both unique index and UNIQUE constraint enforce the uniqueness of values in one or many columns. SQL Server validates duplicates in the same manner for both unique index and unique constraint.
+
+When you create a unique constraint, behind the scene, SQL Server creates a unique index associated with this constraint.
+
+However, creating a unique constraint on columns make the objective of the unique index clear.
+
+-----
+https://www.sqlservertutorial.net/sql-server-indexes/sql-server-drop-index/
+SQL Server DROP INDEX
+
+The DROP INDEX statement removes one or more indexes from the current database. 
+
+DROP INDEX [IF EXISTS] index_name
+ON table_name;
+
+The DROP INDEX statement does not remove indexes created by PRIMARY KEY or UNIQUE constraints. To drop indexes associated with these constraints, you use the ALTER TABLE DROP CONSTRAINT statement.
+
+quitar multiples indices
+
+DROP INDEX [IF EXISTS] 
+    index_name1 ON table_name1,
+    index_name2 ON table_name2,
+    ...;
+
+DROP INDEX 
+    ix_cust_city ON sales.customers,
+    ix_cust_fullname ON sales.customers;
+
+
+------
+https://www.sqlservertutorial.net/sql-server-indexes/sql-server-indexes-with-included-columns/
+SQL Server Indexes with Included Columns
+
+CREATE UNIQUE INDEX ix_cust_email 
+ON sales.customers(email);
+
+In this execution plan:
+
+First, the query optimizer uses the index seek on the non-clustered index ix_cust_email to find the email and customer_id.
+Second, the query optimizer uses the key lookup on the clustered index of the sales.customers table to find the first name and last name of the customer by customer id.
+Third, for each row found in the non-clustered index, it matches with rows found in the clustered index using nested loops.
+
+The syntax for creating an index with included columns
+
+
+CREATE [UNIQUE] INDEX index_name
+ON table_name(key_column_list)
+INCLUDE(included_column_list);
+
+
+-----
+https://www.sqlservertutorial.net/sql-server-indexes/sql-server-filtered-indexes/
+SQL Server Filtered Indexes
+A nonclustered index, when used properly, can greatly improve the performance of queries. However, the benefits of nonclustered indexes come at costs: storage and maintenance.
+
+First, it takes additional storage to store the copy of data of the index key columns.
+Second, when you insert, update, or delete rows from the table, SQL Server needs to update the associated non-clustered index.
+It would be inefficient if applications just query a portion of rows of a table. This is why the filtered indexes come into play.
+
+A filtered index is a nonclustered index with a predicate that allows you to specify which rows should be added to the index.
+ filtered indexes can help you save spaces especially when the index key columns are sparse. Sparse columns are the ones that have many NULL values.
+
+In addition, filtered indexes reduce the maintenance cost because only a portion of data rows, not all, needs to be updated when the data in the associated table changes.
+
+CREATE INDEX index_name
+ON table_name(column_list)
+WHERE predicate;
+
+CREATE INDEX ix_cust_phone
+ON sales.customers(phone)
+INCLUDE (first_name, last_name)
+WHERE phone IS NOT NULL;
+
+In this syntax:
+
+First, specify the name of the filtered index after the CREATE INDEX clause.
+Second, list the table name with a list of key columns that will be included in the index.
+Third, use a WHERE clause with a predicate to specify which rows of the table should be included in the index.
+
+------
+https://www.sqlservertutorial.net/sql-server-indexes/sql-server-indexes-on-computed-columns/
+SQL Server Indexes on Computed Columns
+
+As clearly shown in the output, the query optimizer needs to scan the whole clustered index for locating the customer, which is not efficient.
+
+AGREGO COLUMNA
+ALTER TABLE sales.customers
+ADD 
+    email_local_part AS 
+        SUBSTRING(email, 
+            0, 
+            CHARINDEX('@', email, 0)
+        );
+
+CREO indice
+CREATE INDEX ix_cust_email_local_part
+ON sales.customers(email_local_part);
+
+ASI EVITO usar
+SELECT    
+    first_name,
+    last_name,
+    email
+FROM    
+    sales.customers
+WHERE 
+    SUBSTRING(email, 0, 
+        CHARINDEX('@', email, 0)
+    ) = 'garry.espinoza';
+
+
+Y USO 
+SELECT    
+    first_name,
+    last_name,
+    email
+FROM    
+    sales.customers
+WHERE 
+    email_local_part = 'garry.espinoza';
+
+Requirements for indexes on computed columns
+To create an index on a computed column, the following requirements must be met:
+
+The functions involved in the computed column expression must have the same owner as the table.
+The computed column expression must be deterministic. It means that expression always returns the same result for a given set of inputs.
+The computed column must be precise, which means its expression must not contain any FLOAT or REAL data types.
+The result of the computed column expression cannot evaluate to the TEXT, NTEXT, or IMAGE data types.
+The ANSI_NULLS option must be set to ON when the computed column is defined using the CREATE TABLE or ALTER TABLE statement. In addition, the options ANSI_PADDING, ANSI_WARNINGS, ARITHABORT, QUOTED_IDENTIFIER, and CONCAT_NULL_YIELDS_NULL must also be set to ON, and NUMERIC_ROUNDABORT must be set to OFF.
+
+
+--------
+
+https://www.sqlservertutorial.net/sql-server-stored-procedures/
+SQL Server Stored Procedures
+
+SQL Server stored procedures are used to group one or more Transact-SQL statements into logical units. The stored procedure is stored as a named object in the SQL Server Database Server.
+
+https://www.sqlservertutorial.net/sql-server-stored-procedures/basic-sql-server-stored-procedures/
+
+A Basic Guide to SQL Server Stored Procedures
+
+CREATE PROCEDURE uspProductList
+AS
+BEGIN
+    SELECT 
+        product_name, 
+        list_price
+    FROM 
+        production.products
+    ORDER BY 
+        product_name;
+END;
+
+ejecutar sp 
+EXECUTE sp_name;
+
+EXEC sp_name;
+
+modificar sp
+ ALTER PROCEDURE uspProductList
+    AS
+    BEGIN
+        SELECT 
+            product_name, 
+            list_price
+        FROM 
+            production.products
+        ORDER BY 
+            list_price 
+    END;
+eliminar sp
+
+DROP PROCEDURE sp_name;
+
+
+------
+https://www.sqlservertutorial.net/sql-server-stored-procedures/sql-server-stored-procedure-parameters/
+SQL Server Stored Procedure Parameters
+
+ALTER PROCEDURE uspFindProducts(@min_list_price AS DECIMAL)
+AS
+BEGIN
+    SELECT
+        product_name,
+        list_price
+    FROM 
+        production.products
+    WHERE
+        list_price >= @min_list_price
+    ORDER BY
+        list_price;
+END;
+
+
+ejecutar
+EXEC uspFindProducts 100;
+
+crear sp con multiple parametro
+ALTER PROCEDURE uspFindProducts(
+    @min_list_price AS DECIMAL
+    ,@max_list_price AS DECIMAL
+)
+AS
+BEGIN
+    SELECT
+        product_name,
+        list_price
+    FROM 
+        production.products
+    WHERE
+        list_price >= @min_list_price AND
+        list_price <= @max_list_price
+    ORDER BY
+        list_price;
+END;
+
+ejecutar
+EXECUTE uspFindProducts 900, 1000;
+
+EXECUTE uspFindProducts 
+    @min_list_price = 900, 
+    @max_list_price = 1000;
+
+ALTER PROCEDURE uspFindProducts(
+    @min_list_price AS DECIMAL
+    ,@max_list_price AS DECIMAL
+    ,@name AS VARCHAR(max)
+)
+AS
+BEGIN
+    SELECT
+        product_name,
+        list_price
+    FROM 
+        production.products
+    WHERE
+        list_price >= @min_list_price AND
+        list_price <= @max_list_price AND
+        product_name LIKE '%' + @name + '%'
+    ORDER BY
+        list_price;
+END;
+
+
+
+EXECUTE uspFindProducts 
+    @min_list_price = 900, 
+    @max_list_price = 1000,
+    @name = 'Trek';
+
+
+ALTER PROCEDURE uspFindProducts(
+    @min_list_price AS DECIMAL = 0
+    ,@max_list_price AS DECIMAL = 999999
+    ,@name AS VARCHAR(max)
+)
+AS
+BEGIN
+    SELECT
+        product_name,
+        list_price
+    FROM 
+        production.products
+    WHERE
+        list_price >= @min_list_price AND
+        list_price <= @max_list_price AND
+        product_name LIKE '%' + @name + '%'
+    ORDER BY
+        list_price;
+END;
+
+
+EXECUTE uspFindProducts 
+    @name = 'Trek';
+
+
+Using NULL as the default value
+In the uspFindProducts stored procedure, we used 999,999 as the default maximum list price. This is not robust because in the future you may have products with the list prices that are greater than that.
+
+ALTER PROCEDURE uspFindProducts(
+    @min_list_price AS DECIMAL = 0
+    ,@max_list_price AS DECIMAL = NULL
+    ,@name AS VARCHAR(max)
+)
+AS
+BEGIN
+    SELECT
+        product_name,
+        list_price
+    FROM 
+        production.products
+    WHERE
+        list_price >= @min_list_price AND
+        (@max_list_price IS NULL OR list_price <= @max_list_price) AND
+        product_name LIKE '%' + @name + '%'
+    ORDER BY
+        list_price;
+END;
+
+
+
+EXECUTE uspFindProducts 
+    @min_list_price = 500,
+    @name = 'Haro';
+
+--------
+https://www.sqlservertutorial.net/sql-server-stored-procedures/variables/
+Variables
+A variable is an object that holds a single value of a specific type e.g., integer, date, or varying character string.
+
+declarar variable
+DECLARE @model_year SMALLINT;
+DECLARE @model_year AS SMALLINT;
+DECLARE @model_year SMALLINT, 
+        @product_name VARCHAR(MAX);
+
+asignar valor
+
+SET @model_year = 2018;
+
+usando 
+
+SELECT
+    product_name,
+    model_year,
+    list_price 
+FROM 
+    production.products
+WHERE 
+    model_year = @model_year
+ORDER BY
+    product_name;
+
+almacenar en varaible el resultado de query
+DECLARE @product_count INT;
+SET @product_count = (
+    SELECT 
+        COUNT(*) 
+    FROM 
+        production.products 
+);
+SELECT @product_count;
+
+
+DECLARE 
+    @product_name VARCHAR(MAX),
+    @list_price DECIMAL(10,2);
+
+
+SELECT 
+    @product_name = product_name,
+    @list_price = list_price
+FROM
+    production.products
+WHERE
+    product_id = 100;
+
+
+
+SELECT 
+    @product_name AS product_name, 
+    @list_price AS list_price;
+
+
+CREATE  PROC uspGetProductList(
+    @model_year SMALLINT
+) AS 
+BEGIN
+    DECLARE @product_list VARCHAR(MAX);
+
+    SET @product_list = '';
+
+    SELECT
+        @product_list = @product_list + product_name 
+                        + CHAR(10)
+    FROM 
+        production.products
+    WHERE
+        model_year = @model_year
+    ORDER BY 
+        product_name;
+
+    PRINT @product_list;
+END;
+
+------
+
+https://www.sqlservertutorial.net/sql-server-stored-procedures/stored-procedure-output-parameters/
+Stored Procedure Output Parameters
+
+CREATE PROCEDURE uspFindProductByModel (
+    @model_year SMALLINT,
+    @product_count INT OUTPUT
+) AS
+BEGIN
+    SELECT 
+        product_name,
+        list_price
+    FROM
+        production.products
+    WHERE
+        model_year = @model_year;
+
+    SELECT @product_count = @@ROWCOUNT;
+END;
+
+
+DECLARE @count INT;
+
+EXEC uspFindProductByModel
+    @model_year = 2018,
+    @product_count = @count OUTPUT;
+
+SELECT @count AS 'Number of products found';
+
+----
+
+https://www.sqlservertutorial.net/sql-server-stored-procedures/sql-server-begin-end/
+
+The BEGIN...END statement is used to define a statement block. A statement block consists of a set of SQL statements that execute together. A statement block is also known as a batch.
+
+BEGIN
+    SELECT
+        product_id,
+        product_name
+    FROM
+        production.products
+    WHERE
+        list_price > 100000;
+
+    IF @@ROWCOUNT = 0
+        PRINT 'No product with price greater than 100000 found';
+END
+
+
+    BEGIN
+    DECLARE @name VARCHAR(MAX);
+
+    SELECT TOP 1
+        @name = product_name
+    FROM
+        production.products
+    ORDER BY
+        list_price DESC;
+    
+    IF @@ROWCOUNT <> 0
+    BEGIN
+        PRINT 'The most expensive product is ' + @name
+    END
+    ELSE
+    BEGIN
+        PRINT 'No product found';
+    END;
+END
+In this example, we used the BEGIN...END statement to wrap the whole statement block. Inside this block, we also used the BEGIN...END for the IF...ELSE statement.
+
+-----
+https://www.sqlservertutorial.net/sql-server-stored-procedures/sql-server-if-else/
+SQL Server IF ELSE
+The IF...ELSE statement is a control-flow statement that allows you to execute or skip a statement block based on a specified condition.
+
+IF boolean_expression   
+BEGIN
+    { statement_block }
+END
+
+
+BEGIN
+    DECLARE @sales INT;
+
+    SELECT 
+        @sales = SUM(list_price * quantity)
+    FROM
+        sales.order_items i
+        INNER JOIN sales.orders o ON o.order_id = i.order_id
+    WHERE
+        YEAR(order_date) = 2018;
+
+    SELECT @sales;
+
+    IF @sales > 1000000
+    BEGIN
+        PRINT 'Great! The sales amount in 2018 is greater than 1,000,000';
+    END
+END
+
+IF Boolean_expression
+BEGIN
+    -- Statement block executes when the Boolean expression is TRUE
+END
+ELSE
+BEGIN
+    -- Statement block executes when the Boolean expression is FALSE
+END
+
+
+BEGIN
+    DECLARE @x INT = 10,
+            @y INT = 20;
+
+    IF (@x > 0)
+    BEGIN
+        IF (@x < @y)
+            PRINT 'x > 0 and x < y';
+        ELSE
+            PRINT 'x > 0 and x >= y';
+    END			
+END
+
+-----
+https://www.sqlservertutorial.net/sql-server-stored-procedures/sql-server-while/
+SQL Server WHILE
+
+The WHILE statement is a control-flow statement that allows you to execute a statement block repeatedly as long as a specified condition is TRUE.
+
+DECLARE @counter INT = 1;
+
+WHILE @counter <= 5
+BEGIN
+    PRINT @counter;
+    SET @counter = @counter + 1;
+END
+
+---
+https://www.sqlservertutorial.net/sql-server-stored-procedures/sql-server-break/
+SQL Server BREAK
+
+WHILE Boolean_expression
+BEGIN
+    -- statements
+   IF condition
+        BREAK;
+    -- other statements    
+END
+
+DECLARE @counter INT = 0;
+
+WHILE @counter <= 5
+BEGIN
+    SET @counter = @counter + 1;
+    IF @counter = 4
+        BREAK;
+    PRINT @counter;
+END
+
+-------
+https://www.sqlservertutorial.net/sql-server-stored-procedures/sql-server-continue/
+SQL Server CONTINUE
+The CONTINUE statement stops the current iteration of the loop and starts the new one. The following illustrates the syntax of the CONTINUE statement:
+
+WHILE Boolean_expression
+BEGIN
+    -- code to be executed
+    IF condition
+        CONTINUE;
+    -- code will be skipped if the condition is met
+END
+DECLARE @counter INT = 0;
+
+WHILE @counter < 5
+BEGIN
+    SET @counter = @counter + 1;
+    IF @counter = 3
+        CONTINUE;	
+    PRINT @counter;
+END
+
+-------
+https://www.sqlservertutorial.net/sql-server-stored-procedures/sql-server-cursor/
+SQL Server CURSOR
+
+A database cursor is an object that enables traversal over the rows of a result set. It allows you to process individual row returned by a query.
+
+SQL works based on set e.g., SELECT statement returns a set of rows which is called a result set. However, sometimes, you may want to process a data set on a row by row basis. This is where cursors come into play.
+
+DECLARE cursor_name CURSOR
+    FOR select_statement;
+
+WHILE @@FETCH_STATUS = 0  
+    BEGIN
+        FETCH NEXT FROM cursor_name;  
+    END;
+
+DECLARE 
+    @product_name VARCHAR(MAX), 
+    @list_price   DECIMAL;
+
+DECLARE cursor_product CURSOR
+FOR SELECT 
+        product_name, 
+        list_price
+    FROM 
+        production.products;
+
+OPEN cursor_product;
+FETCH NEXT FROM cursor_product INTO 
+    @product_name, 
+    @list_price;
+
+WHILE @@FETCH_STATUS = 0
+    BEGIN
+        PRINT @product_name + CAST(@list_price AS varchar);
+        FETCH NEXT FROM cursor_product INTO 
+            @product_name, 
+            @list_price;
+    END;
+CLOSE cursor_product;
+
+DEALLOCATE cursor_product;
+
+----------
+https://www.sqlservertutorial.net/sql-server-stored-procedures/sql-server-try-catch/
+SQL Server TRY CATCH
+BEGIN TRY  
+   -- statements that may cause exceptions
+END TRY 
+BEGIN CATCH  
+   -- statements that handle exception
+END CATCH  
+
+ERROR_LINE() returns the line number on which the exception occurred.
+ERROR_MESSAGE() returns the complete text of the generated error message.
+ERROR_PROCEDURE() returns the name of the stored procedure or trigger where the error occurred.
+ERROR_NUMBER() returns the number of the error that occurred.
+ERROR_SEVERITY() returns the severity level of the error that occurred.
+ERROR_STATE() returns the state number of the error that occurred.
+
+
+CREATE PROC usp_divide(
+    @a decimal,
+    @b decimal,
+    @c decimal output
+) AS
+BEGIN
+    BEGIN TRY
+        SET @c = @a / @b;
+    END TRY
+    BEGIN CATCH
+        SELECT  
+            ERROR_NUMBER() AS ErrorNumber  
+            ,ERROR_SEVERITY() AS ErrorSeverity  
+            ,ERROR_STATE() AS ErrorState  
+            ,ERROR_PROCEDURE() AS ErrorProcedure  
+            ,ERROR_LINE() AS ErrorLine  
+            ,ERROR_MESSAGE() AS ErrorMessage;  
+    END CATCH
+END;
+GO
+
+CREATE PROC usp_delete_person(
+    @person_id INT
+) AS
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        -- delete the person
+        DELETE FROM sales.persons 
+        WHERE person_id = @person_id;
+        -- if DELETE succeeds, commit the transaction
+        COMMIT TRANSACTION;  
+    END TRY
+    BEGIN CATCH
+        -- report exception
+        EXEC usp_report_error;
+        
+        -- Test if the transaction is uncommittable.  
+        IF (XACT_STATE()) = -1  
+        BEGIN  
+            PRINT  N'The transaction is in an uncommittable state.' +  
+                    'Rolling back transaction.'  
+            ROLLBACK TRANSACTION;  
+        END;  
+        
+        -- Test if the transaction is committable.  
+        IF (XACT_STATE()) = 1  
+        BEGIN  
+            PRINT N'The transaction is committable.' +  
+                'Committing transaction.'  
+            COMMIT TRANSACTION;     
+        END;  
+    END CATCH
+END;
+GO
+
+EXEC usp_delete_person 1;
+
+
+-----
+https://www.sqlservertutorial.net/sql-server-stored-procedures/sql-server-raiserror/
+SQL Server RAISERROR
+The RAISERROR statement allows you to generate your own error messages and return these messages back to the application using the same format as a system error or warning message generated by SQL Server Database Engine. In addition, the RAISERROR statement allows you to set a specific message id, level of severity, and state for the error messages.
+
+DECLARE 
+    @ErrorMessage  NVARCHAR(4000), 
+    @ErrorSeverity INT, 
+    @ErrorState    INT;
+
+BEGIN TRY
+    RAISERROR('Error occurred in the TRY block.', 17, 1);
+END TRY
+BEGIN CATCH
+    SELECT 
+        @ErrorMessage = ERROR_MESSAGE(), 
+        @ErrorSeverity = ERROR_SEVERITY(), 
+        @ErrorState = ERROR_STATE();
+
+    -- return the error inside the CATCH block
+    RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+END CATCH;
+
+
+DECLARE @MessageText NVARCHAR(100);
+SET @MessageText = N'Cannot delete the sales order %s';
+
+RAISERROR(
+    @MessageText, -- Message text
+    16, -- severity
+    1, -- state
+    N'2001' -- first argument to the message text
+);
+
+You use the RAISERROR statement in the following scenarios:
+
+Troubleshoot Transact-SQL code.
+Return messages that contain variable text.
+Examine the values of data.
+Cause the execution to jump from a TRY block to the associated CATCH block.
+Return error information from the CATCH block to the callers, either calling batch or application.
+
+-----
+https://www.sqlservertutorial.net/sql-server-stored-procedures/sql-server-throw/
+SQL Server THROW
+The THROW statement raises an exception and transfers execution to a CATCH block of a TRY CATCH construct.
+
+
+BEGIN TRY
+    -- statements that may cause errors
+END TRY
+BEGIN CATCH
+    -- statement to handle errors 
+    THROW;   
+END CATCH
+
+THROW vs. RAISERROR
+The following table illustrates the difference between the THROW statement and RAISERROR statement:
+
+RAISERROR	                                                                            THROW
+The message_id that you pass to RAISERROR must be defined in sys.messages view.	        The error_number parameter does not have to be defined in the sys.messages view.
+The message parameter can contain printf formatting styles such as %s and %d.	        The message parameter does not accept printf style formatting. Use FORMATMESSAGE() function to substitute parameters.
+The severity parameter indicates the severity of the exception.	                        The severity of the exception is always set to 16.
+THROW 50005, N'An error occurred', 1;
+
+
+BEGIN TRY
+    INSERT INTO t1(id) VALUES(1);
+    --  cause error
+    INSERT INTO t1(id) VALUES(1);
+END TRY
+BEGIN CATCH
+    PRINT('Raise the caught error again');
+    THROW;
+END CATCH
+
+
+C) Using THROW statement to rethrow an exception
+
+EXEC sys.sp_addmessage 
+    @msgnum = 50010, 
+    @severity = 16, 
+    @msgtext =
+    N'The order number %s cannot be deleted because it does not exist.', 
+    @lang = 'us_english';   
+GO
+
+
+DECLARE @MessageText NVARCHAR(2048);
+SET @MessageText =  FORMATMESSAGE(50010, N'1001');   
+
+THROW 50010, @MessageText, 1; 
+
+
+
+
+---------
+https://www.sqlservertutorial.net/sql-server-stored-procedures/sql-server-dynamic-sql/
+SQL Server Dynamic SQL
+
+Dynamic SQL is a programming technique that allows you to construct SQL statements dynamically at runtime. It allows you to create more general purpose and flexible SQL statement because the full text of the SQL statements may be unknown at compilation. For example, you can use the dynamic SQL to create a stored procedure that queries data against a table whose name is not known until runtime.
+
+EXEC sp_executesql N'SELECT * FROM production.products';
+
+DECLARE 
+    @table NVARCHAR(128),
+    @sql NVARCHAR(MAX);
+SET @table = N'production.products';
+SET @sql = N'SELECT * FROM ' + @table;
+EXEC sp_executesql @sql;
+DECLARE 
+    @table NVARCHAR(128),
+    @sql NVARCHAR(MAX);
+
+SET @table = N'production.products';
+
+SET @sql = N'SELECT * FROM ' + @table;
+
+EXEC sp_executesql @sql;
+
+
+--
+CREATE PROC usp_query (
+    @table NVARCHAR(128)
+)
+AS
+BEGIN
+
+    DECLARE @sql NVARCHAR(MAX);
+    -- construct SQL
+    SET @sql = N'SELECT * FROM ' + @table;
+    -- execute the SQL
+    EXEC sp_executesql @sql;
+    
+END;
+
+EXEC usp_query 'production.brands';
+
+CREATE OR ALTER PROC usp_query_topn(
+    @table NVARCHAR(128),
+    @topN INT,
+    @byColumn NVARCHAR(128)
+)
+AS
+BEGIN
+    DECLARE 
+        @sql NVARCHAR(MAX),
+        @topNStr NVARCHAR(MAX);
+
+    SET @topNStr  = CAST(@topN as nvarchar(max));
+
+    -- construct SQL
+    SET @sql = N'SELECT TOP ' +  @topNStr  + 
+                ' * FROM ' + @table + 
+                    ' ORDER BY ' + @byColumn + ' DESC';
+    -- execute the SQL
+    EXEC sp_executesql @sql;
+    
+END;
+
+
+EXEC usp_query_topn 
+        'production.products',
+        10, 
+        'list_price';
+CREATE TABLE sales.tests(id INT); 
+EXEC usp_query 'production.brands';
+EXEC usp_query 'production.brands;DROP TABLE sales.tests';
+CREATE OR ALTER PROC usp_query
+(
+    @schema NVARCHAR(128), 
+    @table  NVARCHAR(128)
+)
+AS
+    BEGIN
+        DECLARE 
+            @sql NVARCHAR(MAX);
+        -- construct SQL
+        SET @sql = N'SELECT * FROM ' 
+            + QUOTENAME(@schema) 
+            + '.' 
+            + QUOTENAME(@table);
+        -- execute the SQL
+        EXEC sp_executesql @sql;
+    END;
+EXEC usp_query 'production','brands';
+EXEC usp_query 
+        'production',
+        'brands;DROP TABLE sales.tests';
+Invalid object name 'production.brands;DROP TABLE sales.tests'.
+
+EXEC sp_executesql
+N'SELECT *
+    FROM 
+        production.products 
+    WHERE 
+        list_price> @listPrice AND
+        category_id = @categoryId
+    ORDER BY
+        list_price DESC', 
+N'@listPrice DECIMAL(10,2),
+@categoryId INT'
+,@listPrice = 100
+,@categoryId = 1;
+
+
+------------------------
+https://www.sqlservertutorial.net/sql-server-user-defined-functions/
+SQL Server User-defined Functions
+
+Las funciones definidas por el usuario de SQL Server lo ayudan a simplificar su desarrollo al encapsular la lógica comercial compleja y hacer que estén disponibles para su reutilización en cada consulta.
+-----------------------
+https://www.sqlservertutorial.net/sql-server-user-defined-functions/sql-server-scalar-functions/
+SQL Server Scalar Functions
+cubre las funciones escalares definidas por el usuario que le permiten encapsular fórmulas complejas o lógica empresarial y reutilizarlas en cada consulta.
+La función escalar de SQL Server toma uno o más parámetros y devuelve un valor único.
+
+Las funciones escalares te ayudan a simplificar tu código. Por ejemplo, puede tener un cálculo complejo que aparece en muchas consultas . En lugar de incluir la fórmula en cada consulta, puede crear una función escalar que encapsule la fórmula y la use en cada consulta.
+
+CREATE FUNCTION [schema_name.]function_name (parameter_list)
+RETURNS data_type AS
+BEGIN
+    statements
+    RETURN value
+END
+
+
+CREATE FUNCTION sales.udfNetSale(
+    @quantity INT,
+    @list_price DEC(10,2),
+    @discount DEC(4,2)
+)
+RETURNS DEC(10,2)
+AS 
+BEGIN
+    RETURN @quantity * @list_price * (1 - @discount);
+END;
+
+
+SELECT 
+    sales.udfNetSale(10,100,0.1) net_sale;
+
+
+ALTER FUNCTION [schema_name.]function_name (parameter_list)
+    RETURN data_type AS
+    BEGIN
+        statements
+        RETURN value
+    END
+
+
+DROP FUNCTION [schema_name.]function_name;
+
+Notas de la función escalar de SQL Server
+Los siguientes son algunos puntos clave de las funciones escalares:
+
+Las funciones escalares se pueden usar casi en cualquier lugar en las declaraciones T-SQL.
+Las funciones escalares aceptan uno o más parámetros pero devuelven solo un valor, por lo tanto, deben incluir una RETURNdeclaración.
+Las funciones escalares pueden usar lógica como IFbloques o WHILEbucles.
+Las funciones escalares no pueden actualizar datos. Pueden acceder a los datos, pero esto no es una buena práctica.
+Las funciones escalares pueden llamar a otras funciones.
+
+------------------------------------
+https://www.sqlservertutorial.net/sql-server-user-defined-functions/sql-server-table-variables/
+SQL Server Table Variables
+Variables de tabla : aprenda a usar variables de tabla como valor de retorno de funciones definidas por el usuario.
+Table variables are kinds of variables that allow you to hold rows of data, which are similar to temporary tables.
+
+DECLARE @table_variable_name TABLE (
+    column_list
+);
+
+las variables de tabla están fuera del alcance al final del lote.
+Si define una variable de tabla en un procedimiento almacenado o una función definida por el usuario , la variable de la tabla ya no existirá después de que finalice el procedimiento almacenado o la función definida por el usuario
+DECLARE @product_table TABLE (
+    product_name VARCHAR(MAX) NOT NULL,
+    brand_id INT NOT NULL,
+    list_price DEC(11,2) NOT NULL
+);
+
+INSERT INTO @product_table
+SELECT
+    product_name,
+    brand_id,
+    list_price
+FROM
+    production.products
+WHERE
+    category_id = 1;
+
+
+SELECT
+    *
+FROM
+    @product_table;
+
+
+DECLARE @product_table TABLE (
+    product_name VARCHAR(MAX) NOT NULL,
+    brand_id INT NOT NULL,
+    list_price DEC(11,2) NOT NULL
+);
+
+INSERT INTO @product_table
+SELECT
+    product_name,
+    brand_id,
+    list_price
+FROM
+    production.products
+WHERE
+    category_id = 1;
+
+SELECT
+    *
+FROM
+    @product_table;
+GO
+
+
+A diferencia de una tabla regular o temporal, no puede modificar la estructura de las variables de la tabla después de declararlas.
+
+En segundo lugar, las estadísticas ayudan al optimizador de consultas a elaborar un buen plan de ejecución de consultas. Desafortunadamente, las variables de la tabla no contienen estadísticas. Por lo tanto, debe usar variables de tabla para contener una pequeña cantidad de filas.
+
+Tercero, no puede usar la variable de tabla como un parámetro de entrada o salida como otros tipos de datos . Sin embargo, puede devolver una variable de tabla desde una función definida por el usuario
+
+En cuarto lugar, no puede crear índices no agrupados para variables de tabla. 
+
+Rendimiento de las variables de la tabla
+El uso de variables de tabla en un procedimiento almacenado genera menos recompilaciones que el uso de una tabla temporal .
+
+CREATE OR ALTER FUNCTION udfSplit(
+    @string VARCHAR(MAX), 
+    @delimiter VARCHAR(50) = ' ')
+RETURNS @parts TABLE
+(    
+idx INT IDENTITY PRIMARY KEY,
+val VARCHAR(MAX)   
+)
+AS
+BEGIN
+
+DECLARE @index INT = -1;
+
+WHILE (LEN(@string) > 0) 
+BEGIN 
+    SET @index = CHARINDEX(@delimiter , @string)  ;
+    
+    IF (@index = 0) AND (LEN(@string) > 0)  
+    BEGIN  
+        INSERT INTO @parts 
+        VALUES (@string);
+        BREAK  
+    END 
+
+    IF (@index > 1)  
+    BEGIN  
+        INSERT INTO @parts 
+        VALUES (LEFT(@string, @index - 1));
+        
+        SET @string = RIGHT(@string, (LEN(@string) - @index));  
+    END 
+    ELSE
+    SET @string = RIGHT(@string, (LEN(@string) - @index)); 
+    END
+RETURN
+END
+GO
+
+--------------------------------------
+https://www.sqlservertutorial.net/sql-server-user-defined-functions/sql-server-table-valued-functions/
+SQL Server Table-valued Functions
+Una función con valores de tabla es una función definida por el usuario que devuelve datos de un tipo de tabla. El tipo de retorno de una función con valores de tabla es una tabla, por lo tanto, puede usar la función con valores de tabla tal como usaría una tabla.
+Funciones con valores de tabla : le presentan la función con valores de tabla en línea y la función con valores de tabla de múltiples declaraciones para desarrollar funciones definidas por el usuario que devuelven datos de tipos de tabla.
+
+CREATE FUNCTION udfProductInYear (
+    @model_year INT
+)
+RETURNS TABLE
+AS
+RETURN
+    SELECT 
+        product_name,
+        model_year,
+        list_price
+    FROM
+        production.products
+    WHERE
+        model_year = @model_year;
+
+SELECT 
+    * 
+FROM 
+    udfProductInYear(2017);
+
+También puede especificar qué columnas se devolverán desde la función con valores de tabla de la siguiente manera:
+
+SELECT 
+    product_name,
+    list_price
+FROM 
+    udfProductInYear(2018);
+
+
+ALTER FUNCTION udfProductInYear (
+    @start_year INT,
+    @end_year INT
+)
+RETURNS TABLE
+AS
+RETURN
+    SELECT 
+        product_name,
+        model_year,
+        list_price
+    FROM
+        production.products
+    WHERE
+        model_year BETWEEN @start_year AND @end_year
+
+
+SELECT 
+    product_name,
+    model_year,
+    list_price
+FROM 
+    udfProductInYear(2017,2018)
+ORDER BY
+    product_name;
+
+Funciones con valores de tabla de varias instrucciones (MSTVF)
+Una función con valores de tabla de varias declaraciones o MSTVF es una función con valores de tabla que devuelve el resultado de varias declaraciones.
+
+La función con valores de tabla de declaraciones múltiples es muy útil porque puede ejecutar varias consultas dentro de la función y agregar resultados en la tabla devuelta.
+
+Para definir una función con valores de tabla de instrucciones múltiples, utilice una variable de tabla como valor de retorno. Dentro de la función, ejecuta una o más consultas e inserta datos en esta variable de tabla.
+Cuándo usar funciones con valores de tabla
+Por lo general, usamos funciones con valores de tabla como vistas parametrizadas . En comparación con los procedimientos almacenados , las funciones con valores de tabla son más flexibles porque podemos usarlas dondequiera que se usen tablas.
+
+
+---------------------------------
+https://www.sqlservertutorial.net/sql-server-user-defined-functions/sql-server-drop-function/
+Eliminación de funciones definidas por el usuario : aprenda a eliminar una o más funciones definidas por el usuario existentes de la base de datos.
+
+DROP FUNCTION [IF EXISTS] 
+    schema_name.function_name1, 
+    schema_name.function_name2,
+    ...;
+
+    CREATE FUNCTION sales.udf_get_discount_amount (
+    @quantity INT,
+    @list_price DEC(10,2),
+    @discount DEC(4,2) 
+)
+RETURNS DEC(10,2) 
+AS 
+BEGIN
+    RETURN @quantity * @list_price * @discount
+END
+
+
+DROP FUNCTION IF EXISTS sales.udf_get_discount_amount;
+
+CREATE FUNCTION sales.udf_get_discount_amount (
+    @quantity INT,
+    @list_price DEC(10,2),
+    @discount DEC(4,2) 
+)
+RETURNS DEC(10,2) 
+WITH SCHEMABINDING
+AS 
+BEGIN
+    RETURN @quantity * @list_price * @discount
+END
+
+
+CREATE VIEW sales.discounts
+WITH SCHEMABINDING
+AS
+SELECT
+    order_id,
+    SUM(sales.udf_get_discount_amount(
+        quantity,
+        list_price,
+        discount
+    )) AS discount_amount
+FROM
+    sales.order_items i
+GROUP BY
+    order_id;
+
+
+
+DROP FUNCTION sales.udf_get_discount_amount;
+
+
+----------------------
+https://www.sqlservertutorial.net/sql-server-triggers/
+SQL Server Triggers
+
+SQL Server triggers are special stored procedures that are executed automatically in response to the database object, database, and server events. SQL Server provides three type of triggers:
+
+Data manipulation language (DML) triggers which are invoked automatically in response to INSERT, UPDATE, and DELETE events against tables.
+Data definition language (DDL) triggers which fire in response to CREATE, ALTER, and DROP statements. DDL triggers also fire in response to some system stored procedures that perform DDL-like operations.
+Logon triggers which fire in response to LOGON events
+
+-------
+https://www.sqlservertutorial.net/sql-server-triggers/sql-server-create-trigger/
+
+CREATE TRIGGER [schema_name.]trigger_name
+ON table_name
+AFTER  {[INSERT],[UPDATE],[DELETE]}
+[NOT FOR REPLICATION]
+AS
+{sql_statements}
+
+
+“Virtual” tables for triggers: INSERTED and DELETED
+SQL Server provides two virtual tables that are available specifically for triggers called INSERTED and DELETED tables. SQL Server uses these tables to capture the data of the modified row before and after the event occurs.
+
+DML event	INSERTED table holds	            DELETED table holds
+INSERT	    rows to be inserted	                empty
+UPDATE	    new rows modified by the update	    existing rows modified by the update
+DELETE	    empty	                            rows to be deleted
+
+CREATE TRIGGER production.trg_product_audit
+ON production.products
+AFTER INSERT, DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO production.product_audits(
+        product_id, 
+        product_name,
+        brand_id,
+        category_id,
+        model_year,
+        list_price, 
+        updated_at, 
+        operation
+    )
+    SELECT
+        i.product_id,
+        product_name,
+        brand_id,
+        category_id,
+        model_year,
+        i.list_price,
+        GETDATE(),
+        'INS'
+    FROM
+        inserted i
+    UNION ALL
+    SELECT
+        d.product_id,
+        product_name,
+        brand_id,
+        category_id,
+        model_year,
+        d.list_price,
+        GETDATE(),
+        'DEL'
+    FROM
+        deleted d;
+END
+
+--------------------------------
+https://www.sqlservertutorial.net/sql-server-triggers/sql-server-instead-of-trigger/
+SQL Server INSTEAD OF Trigger
+
+An INSTEAD OF trigger is a trigger that allows you to skip an INSERT, DELETE, or UPDATE statement to a table or a view and execute other statements defined in the trigger instead. The actual insert, delete, or update operation does not occur at all.
+
+In other words, an INSTEAD OF trigger skips a DML statement and execute other statements.
+
+Suppose, an application needs to insert new brands into the production.brands table. However, the new brands should be stored in another table called production.brand_approvals for approval before inserting into the production.brands table.
+
+To accomplish this, you create a view called production.vw_brands for the application to insert new brands. If brands are inserted into the view, an INSTEAD OF trigger will be fired to insert brands into the production.brand_approvals table.
+
+CREATE VIEW production.vw_brands 
+AS
+SELECT
+    brand_name,
+    'Approved' approval_status
+FROM
+    production.brands
+UNION
+SELECT
+    brand_name,
+    'Pending Approval' approval_status
+FROM
+    production.brand_approvals;
+
+
+
+CREATE TRIGGER production.trg_vw_brands 
+ON production.vw_brands
+INSTEAD OF INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO production.brand_approvals ( 
+        brand_name
+    )
+    SELECT
+        i.brand_name
+    FROM
+        inserted i
+    WHERE
+        i.brand_name NOT IN (
+            SELECT 
+                brand_name
+            FROM
+                production.brands
+        );
+END
+
+
+------------------
+https://www.sqlservertutorial.net/sql-server-triggers/sql-server-ddl-trigger/
+
+SQL Server DDL triggers respond to server or database events rather than to table data modifications. These events created by the Transact-SQL statement that normally starts with one of the following keywords CREATE, ALTER, DROP, GRANT, DENY, REVOKE, or UPDATE STATISTICS.
+
+The DDL triggers are useful in the following cases:
+
+Record changes in the database schema.
+Prevent some specific changes to the database schema.
+Respond to a change in the database schema.
+
+
+Specify the user-defined name of trigger after the CREATE TRIGGER keywords. Note that you don’t have to specify a schema for a DDL trigger because it isn’t related to an actual database table or view.
+
+
+CREATE TRIGGER trg_index_changes
+ON DATABASE
+FOR	
+    CREATE_INDEX,
+    ALTER_INDEX, 
+    DROP_INDEX
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    INSERT INTO index_logs (
+        event_data,
+        changed_by
+    )
+    VALUES (
+        EVENTDATA(),
+        USER
+    );
+END;
+GO
+
+
+
+CREATE NONCLUSTERED INDEX nidx_fname
+ON sales.customers(first_name);
+GO
+
+CREATE NONCLUSTERED INDEX nidx_lname
+ON sales.customers(last_name);
+GO
+
+--------------------------------------
+https://www.sqlservertutorial.net/sql-server-triggers/sql-server-disable-trigger/
+
+SQL Server DISABLE TRIGGER
+
+
+CREATE TRIGGER sales.trg_members_insert
+ON sales.members
+AFTER INSERT
+AS
+BEGIN
+    PRINT 'A new member has been inserted';
+END;
+
+INSERT INTO sales.members(customer_id, member_level)
+VALUES(1,'Silver');
+
+
+DISABLE TRIGGER sales.trg_members_insert 
+ON sales.members;
+
+DISABLE TRIGGER ALL ON table_name;
+
+DISABLE TRIGGER ALL ON DATABASE;
+
+------------------------------
+https://www.sqlservertutorial.net/sql-server-triggers/sql-server-enable-trigger/
+
+ENABLE TRIGGER sales.trg_members_insert
+ON sales.members;
+
+ENABLE TRIGGER ALL ON table_name;
+
+ENABLE TRIGGER ALL ON DATABASE; 
+
+
+---------------------------------
+
+https://www.sqlservertutorial.net/sql-server-triggers/sql-server-view-trigger-definition/
+SQL Server View Trigger Definition
+
+SELECT 
+    OBJECT_DEFINITION (
+        OBJECT_ID(
+            'sales.trg_members_delete'
+        )
+    ) AS trigger_definition;
+
+
+EXEC sp_helptext 'sales.trg_members_delete' ;
+
+-----------------------------------
+https://www.sqlservertutorial.net/sql-server-triggers/sql-server-list-all-triggers/
+
+SQL Server List All Triggers
+
+SELECT  
+    name,
+    is_instead_of_trigger
+FROM 
+    sys.triggers  
+WHERE 
+    type = 'TR';
+
+-------------------------------------
+https://www.sqlservertutorial.net/sql-server-triggers/sql-server-drop-trigger/
+SQL Server DROP TRIGGER
+
+A) SQL Server DROP TRIGGER – drop a DML trigger example
+DROP TRIGGER IF EXISTS sales.trg_member_insert;
+
+
+B) SQL Server DROP TRIGGER – drop a DDL trigger example
+DROP TRIGGER IF EXISTS trg_index_changes;
+
+
+--------------------------------------
+https://www.sqlservertutorial.net/sql-server-aggregate-functions/
+
+SQL Server Aggregate Functions
+
+An aggregate function performs a calculation one or more values and returns a single value. The aggregate function is often used with the GROUP BY clause and HAVING clause of the SELECT statement.
+-------------------
+The following statement use the AVG() function to return the average list price of all products in the products table:
+
+SELECT
+    AVG(list_price) avg_product_price
+FROM
+    production.products;
+
+SELECT
+    CAST(ROUND(AVG(list_price),2) AS DEC(10,2))
+    avg_product_price
+FROM
+    production.products;
+
+SELECT
+    AVG(DISTINCT val)
+FROM
+    t;
+
+
+SELECT
+    category_name,
+    CAST(ROUND(AVG(list_price),2) AS DEC(10,2))
+    avg_product_price
+FROM
+    production.products p
+    INNER JOIN production.categories c 
+        ON c.category_id = p.category_id
+GROUP BY
+    category_name
+ORDER BY
+    category_name;
+
+
+SELECT
+    brand_name,
+    CAST(ROUND(AVG(list_price),2) AS DEC(10,2))
+    avg_product_price
+FROM
+    production.products p
+    INNER JOIN production.brands c ON c.brand_id = p.brand_id
+GROUP BY
+    brand_name
+HAVING
+    AVG(list_price) > 500
+ORDER BY
+    avg_product_price;
+
+
+
+-----------------------------
+
+COUNT example
+The following statement uses the COUNT() function to return the number of products whose price is greater than 500
+
+SELECT
+    COUNT(*) product_count
+FROM
+    production.products
+WHERE
+    list_price > 500;
+
+SELECT 
+    category_name,
+    COUNT(*) product_count
+FROM
+    production.products p
+    INNER JOIN production.categories c 
+    ON c.category_id = p.category_id
+GROUP BY 
+    category_name
+ORDER BY
+    product_count DESC;
+
+SELECT 
+    brand_name,
+    COUNT(*) product_count
+FROM
+    production.products p
+    INNER JOIN production.brands c 
+    ON c.brand_id = p.brand_id
+GROUP BY 
+    brand_name
+HAVING
+    COUNT(*) > 20
+ORDER BY
+    product_count DESC;
+
+
+--------------------------------------
+MAX example
+The following statement uses the MAX() function to return the highest list price of all products
+
+SELECT
+    MAX(list_price) max_list_price
+FROM
+    production.products;
+
+SELECT
+    brand_name,
+    MAX(list_price) max_list_price
+FROM
+    production.products p
+    INNER JOIN production.brands b
+        ON b.brand_id = p.brand_id 
+GROUP BY
+    brand_name
+ORDER BY
+    brand_name;
+
+SELECT
+    brand_name,
+    MAX(list_price) max_list_price
+FROM
+    production.products p
+    INNER JOIN production.brands b
+        ON b.brand_id = p.brand_id 
+GROUP BY
+    brand_name
+HAVING 
+    MAX(list_price) > 1000
+ORDER BY
+    max_list_price DESC;
+
+
+----------------------------------------
+
+MIN example
+Similarly, the following statement uses the MIN() function to return the lowest list price of all products
+
+SELECT
+    MIN(list_price) min_list_price
+FROM
+    production.products;     
+
+SELECT 
+    product_id,
+    product_name,
+    list_price
+FROM 
+    production.products
+WHERE 
+    list_price = (
+        SELECT 
+            MIN(list_price )
+        FROM
+            production.products);
+
+SELECT
+    category_name,
+    MIN(list_price) min_list_price
+FROM
+    production.products p
+    INNER JOIN production.categories c 
+        ON c.category_id = p.category_id 
+GROUP BY
+    category_name
+ORDER BY
+    category_name;
+
+SELECT
+    category_name,
+    MIN(list_price) min_list_price
+FROM
+    production.products p
+    INNER JOIN production.categories c 
+        ON c.category_id = p.category_id 
+GROUP BY
+    category_name
+HAVING
+    MIN(list_price) > 500
+ORDER BY
+    category_name;
+
+----------------------------------
+
+SUM example
+To demonstrate the SUM() function, we will use the stocks table from the sample database.
+
+SELECT 
+    product_id, 
+    SUM(quantity) stock_count
+FROM 
+    production.stocks
+GROUP BY
+    product_id
+ORDER BY 
+    stock_count DESC;
+
+SELECT
+    store_id,
+    SUM(quantity) store_stocks
+FROM
+    production.stocks
+GROUP BY
+    store_id;
+
+SELECT
+    store_name,
+    SUM(quantity) store_stocks
+FROM
+    production.stocks w
+    INNER JOIN sales.stores s
+        ON s.store_id = w.store_id
+GROUP BY
+    store_name;
+
+SELECT
+    product_name,
+    SUM(quantity) total_stocks
+FROM
+    production.stocks s
+    INNER JOIN production.products p
+        ON p.product_id = s.product_id
+GROUP BY
+    product_name
+HAVING
+    SUM(quantity) > 100
+ORDER BY
+    total_stocks DESC;
+
+
+SELECT
+    order_id,
+    SUM(
+        quantity * list_price * (1 - discount)
+    ) net_value
+FROM
+    sales.order_items
+GROUP BY
+    order_id
+ORDER BY
+    net_value DESC;
+
+
+-------------------------
+
+STDEV example
+The following statement uses the STDEV() function to calculate the statistical standard deviation of all list prices:
+
+SELECT
+    CAST(ROUND(STDEV(list_price),2) as DEC(10,2)) stdev_list_price
+FROM
+    production.products;
+------------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/
+SQL Server Date Functions
+
+
+Function	        Description
+CURRENT_TIMESTAMP	Returns the current system date and time without the time zone part.
+GETUTCDATE	        Returns a date part of a date as an integer number.
+GETDATE	            Returns the current system date and time of the operating system on which the SQL Server is running.
+SYSDATETIME	        Returns the current system date and time with more fractional seconds precision than the GETDATE() function.
+SYSUTCDATETIME	    Returns the current system date and time in UTC time
+SYSDATETIMEOFFSET	Returns the current system date and time with the time zone.
+
+
+
+returning the date and time Parts
+Function	Description
+DATENAME	Returns a date part of a date as a character string
+DATEPART	Returns a date part of a date as an integer number
+DAY	        Returns the day of a specified date as an integer
+MONTH	    Returns the month of a specified date as an integer
+YEAR	    Returns the year of the date as an integer.
+
+Returning a difference between two dates
+Function	Return value
+DATEDIFF	Returns a difference in date part between two dates.
+
+Modifying dates
+Function	        Description
+DATEADD	            Adds a value to a date part of a date and return the new date value.
+EOMONTH	            Returns the last day of the month containing the specified date, with an optional offset.
+SWITCHOFFSET	    Changes the time zone offset of a DATETIMEOFFSET value and preserves the UTC value.
+TODATETIMEOFFSET	Transforms a DATETIME2 value into a DATETIMEOFFSET value.
+
+Constructing date and time from their parts
+Function	            Description
+DATEFROMPARTS	        Return a DATE value from the year, month, and day.
+DATETIME2FROMPARTS	    Returns a DATETIME2 value from the date and time arguments
+DATETIMEOFFSETFROMPARTS	Returns a DATETIMEOFFSET value from the date and time arguments
+TIMEFROMPARTS	        Returns a TIME value from the time parts with the precisions
+
+Validating date and time values
+Function	    Description
+ISDATE	        Check if a value is a valid date, time, or datetime value
+
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-dateadd-function/
+
+SQL Server DATEADD() function overview
+The DATEADD() function adds a number to a specified date part of an input date and returns the modified value.
+
+SELECT 
+    DATEADD(second, 1, '2018-12-31 23:59:59') result;
+
+result
+-----------------------
+2019-01-01 00:00:00.000
+
+(1 row affected)
+
+SELECT 
+    DATEADD(day, 1, '2018-12-31 23:59:59') result;
+
+SELECT 
+    order_id, 
+    customer_id, 
+    order_date,
+    DATEADD(day, 2, order_date) estimated_shipped_date
+FROM 
+    sales.orders
+WHERE 
+    shipped_date IS NULL
+ORDER BY 
+    estimated_shipped_date DESC;
+
+SELECT 
+    DATEADD(month, 4, '2019-05-31') AS result;
+
+--------------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-eomonth-function/
+
+SQL Server EOMONTH Function 
+The EOMONTH() function returns the last day of the month of a specified date, with an optional offset.
+
+SELECT 
+    EOMONTH('2019-02-15') end_of_month_feb2019;
+
+end_of_month_feb2019
+--------------------
+2019-02-28
+
+(1 row affected)
+
+B) Using EOMONTH() function to get the number of days in a specified month
+SELECT 
+    DAY(EOMONTH('2020-02-09')) days;
+
+SELECT 
+    EOMONTH('2019-02-15', 2) eomonth_next_2_months;
+
+--------------------.
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-datefromparts-function/
+SQL Server DATEFROMPARTS Function
+The DATEFROMPARTS() function returns a DATE value that maps to a year, month, and day values.
+
+SELECT 
+    DATEFROMPARTS(2020,12,31) a_date;
+a_date
+----------
+2020-12-31
+
+(1 row affected)
+
+SELECT 
+    DATEFROMPARTS(2020,null,31) a_date;
+
+
+a_date
+----------
+NULL
+
+(1 row affected)
+
+SELECT 
+    DATEFROMPARTS(2020,20,-1) a_date;
+
+Cannot construct data type date, some of the arguments have values which are not valid.
+
+---------------------------------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-datetime2fromparts-function/
+SQL Server DATETIME2FROMPARTS Function
+The DATETIME2FROMPARTS() function returns a date value constructed from the year, month, day, hour, minute, seconds, fractions, and precision value.
+
+SELECT 
+    DATETIME2FROMPARTS ( 2020, 12, 31, 11, 59, 59, 0, 0 ) result;  
+
+result
+---------------------------
+2020-12-31 11:59:59
+
+(1 row affected)
+
+SELECT 
+    DATETIME2FROMPARTS(2020, NULL, 31, 11, 59, 59, 0, 0) result;
+
+result
+---------------------------
+NULL
+
+(1 row affected)
+
+SELECT 
+    DATETIME2FROMPARTS(2020, 13, 31, 11, 59, 59, 0, 0) result;
+Cannot construct data type datetime2, some of the arguments have values which are not valid.
+
+-----------------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-datetimeoffsetfromparts-function/
+
+SELECT 
+    DATETIMEOFFSETFROMPARTS(2020, 11, 12, 20, 35, 30, 5000, 10, 30, 4) Result;
+
+Result
+----------------------------------
+2020-11-12 20:35:30.5000 +10:30
+
+(1 row affected)
+
+SELECT 
+    DATETIMEOFFSETFROMPARTS(NULL, 11, 12, 20, 35, 30, 5000, 10, 30, 4) Result;
+
+Result
+---------------------------
+NULL
+
+(1 row affected)
+
+
+SELECT 
+    DATETIMEOFFSETFROMPARTS(2020, 19, 14, 20, 35, 30, 5000, 10, 30, 4) Result;
+Cannot construct data type datetimeoffset, some of the arguments have values which are not valid.
+
+-+-----------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-timefromparts/
+SQL Server TIMEFROMPARTS
+
+SELECT 
+    TIMEFROMPARTS(23, 59, 59, 0, 0) AS Time;
+Time
+----------------
+23:59:59
+
+(1 row affected)
+
+SELECT 
+    TIMEFROMPARTS(06, 30, 15, 5, 2) Time;
+
+Time
+----------------
+06:30:15.05
+
+(1 row affected)
+
+------------------------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-isdate-function/
+
+SELECT 
+    ISDATE('2020-06-15') is_date
+
+is_date
+-----------
+1
+
+(1 row affected)
+
+SELECT 
+    ISDATE('2020-15-06') is_date
+
+is_date
+-----------
+0
+
+(1 row affected)
+
+SET LANGUAGE british;
+
+SELECT 
+    ISDATE('2020-15-06') is_date
+
+is_date
+-----------
+1
+
+(1 row affected)        
+
+SELECT 
+    ISDATE('2020-12-05 11:20:30') is_date
+is_date
+-----------
+1
+
+(1 row affected)
+
+
+
+
+---------------------------------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-current_time-function/
+SQL Server CURRENT_TIME Function
+
+SELECT 
+    CURRENT_TIMESTAMP AS current_date_time;
+
+current_date_time
+-----------------------
+2019-02-23 20:02:21.550
+
+(1 row affected)
+
+---------------------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-getutcdate-function/
+SQL Server GETUTCDATE Function
+
+The GETUTCDATE() function returns the current UTC time. The GETUTCDATE() function calculates this value from the operating system on which the SQL server is running.
+DECLARE 
+    @local_time DATETIME,
+    @utc_time DATETIME;
+
+SET @local_time = GETDATE();
+SET @utc_time = GETUTCDATE();
+
+SELECT 
+    CONVERT(VARCHAR(40), @local_time) 
+        AS 'Server local time';
+SELECT 
+    CONVERT(VARCHAR(40), @utc_time) 
+        AS 'Server UTC time'
+SELECT 
+    CONVERT(VARCHAR(40), DATEDIFF(hour, @utc_time, @local_time)) 
+        AS 'Server time zone';
+GO
+
+-------------------------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-getdate-function/
+SQL Server GETDATE Function
+
+SELECT 
+    GETDATE() current_date_time;
+
+current_date_time
+-----------------------
+2019-04-28 15:13:26.270
+
+(1 row affected)
+
+
+SELECT 
+    CONVERT(DATE, GETDATE()) [Current Date];
+
+Current Date
+------------
+2019-04-28
+
+(1 row affected)
+
+SELECT 
+    TRY_CONVERT(DATE, GETDATE()),
+    CAST(GETDATE() AS DATE);
+
+SELECT 
+    CONVERT(TIME,GETDATE()),
+    TRY_CONVERT(TIME, GETDATE()),
+    CAST(GETDATE() AS TIME);
+
+---------------------------------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-sysdatetime-function/
+SQL Server SYSDATETIME Function
+
+A) Returning the current system date example
+
+
+SELECT 
+    CONVERT(DATE, SYSDATETIME());
+
+Result
+----------
+2019-05-02
+
+(1 row affected)
+
+
+B) Returning the current system time
+SELECT 
+    CONVERT(TIME, SYSDATETIME()) Result;
+Result
+----------------
+22:32:07.2066595
+
+(1 row affected)
+
+-----------------------------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-datename-function/
+SQL Server DATENAME Function
+The DATENAME() function returns a string, NVARCHAR type, that represents a specified date part e.g., year, month and day of a specified date.
+
+date_part	abbreviations
+year	yy, yyyy
+quarter	qq, q
+month	mm, m
+dayofyear	dy, y
+day	dd, d
+week	wk, ww
+weekday	dw
+hour	hh
+minute	mi, n
+second	ss, s
+millisecond	ms
+microsecond	mcs
+nanosecond	ns
+TZoffset	tz
+ISO_WEEK	isowk, isoww
+
+DATENAME() vs. DATEPART()
+Note that DATENAME() is similar to the DATEPART() except for the return type. The DATENAME() function returns the date part as a character string whereas the DATEPART() returns the date part as an integer.
+
+SELECT
+    DATEPART(year, '2018-05-10') [datepart], 
+    DATENAME(year, '2018-05-10') [datename];
+
+datepart    datename
+----------- -----------
+2018        2018
+
+
+SELECT
+    DATEPART(year, '2018-05-10') + '1' [datepart], 
+    DATENAME(year, '2018-05-10') + '1' [datename] ;
+
+datepart    datename
+----------- -----------
+2019        20181
+
+---------------------------------------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-datepart-function/
+SQL Server DATEPART Function
+
+The DATEPART() function returns an integer which is a part of a date such as a day, month, and year.
+
+DECLARE @d DATETIME = '2019-01-01 14:30:14';
+SELECT 
+   DATEPART(year, @d) year, 
+   DATEPART(quarter, @d) quarter, 
+   DATEPART(month, @d) month, 
+   DATEPART(day, @d) day, 
+   DATEPART(hour, @d) hour, 
+   DATEPART(minute, @d) minute, 
+   DATEPART(second, @d) second;
+
+SELECT DATEPART(year, shipped_date) [year], 
+       DATEPART(quarter, shipped_date) [quarter], 
+       DATEPART(month, shipped_date) [month], 
+       DATEPART(day, shipped_date) [day], 
+       SUM(quantity * list_price) gross_sales
+FROM sales.orders o
+     INNER JOIN sales.order_items i ON i.order_id = o.order_id
+WHERE shipped_date IS NOT NULL
+GROUP BY DATEPART(year, shipped_date), 
+         DATEPART(quarter, shipped_date), 
+         DATEPART(month, shipped_date), 
+         DATEPART(day, shipped_date)
+ORDER BY [year] DESC, 
+         
+-------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-day-function/
+SQL Server DAY Function
+SELECT 
+	DAY('2030-12-01') [DAY];
+
+DAY
+-----------
+1
+
+(1 row affected)
+
+The DAY() function will return 1 if the input date contains only time part:
+
+
+SELECT 
+	DAY('10:20:30') [DAY];
+
+DAY
+-----------
+1
+
+(1 row affected)
+
+
+SELECT 
+    DAY(shipped_date) [day], 
+    SUM(list_price * quantity) gross_sales
+FROM 
+    sales.orders o
+    INNER JOIN sales.order_items i ON i.order_id = o.order_id
+WHERE 
+    shipped_date IS NOT NULL
+    AND YEAR(shipped_date) = 2017
+    AND MONTH(shipped_date) = 2
+GROUP BY 
+    DAY(shipped_date)
+ORDER BY [day];    
+-------------------------------------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-month-function/
+SQL Server MONTH Function
+
+SELECT 
+	MONTH('2020-12-01') [month];
+month
+-----------
+12
+
+(1 row affected)
+The MONTH() function will return 1 if the date value contains only time part:
+
+
+SELECT 
+	MONTH('15:30:20') [month];
+month
+-----------
+1
+
+(1 row affected)
+
+SELECT MONTH(shipped_date) [month], 
+    SUM(list_price * quantity) gross_sales
+FROM sales.orders o
+    INNER JOIN sales.order_items i ON i.order_id = o.order_id
+WHERE shipped_date IS NOT NULL
+    AND YEAR(shipped_date) = 2017
+GROUP BY MONTH(shipped_date)
+ORDER BY [month];
+
+--------------------------------------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-year-function/
+SQL Server YEAR Function
+SELECT 
+	YEAR('2019-02-01') [year];
+year
+-----------
+2019
+
+(1 row affected)
+If the input date value has only time data, the YEAR() function will return 1900:
+
+SELECT 
+	YEAR('11:05:01') [year];
+year
+-----------
+1900
+
+(1 row affected)
+
+
+SELECT YEAR(shipped_date) [year], 
+	   SUM(list_price * quantity) gross_sales
+FROM sales.orders o
+	 INNER JOIN sales.order_items i ON i.order_id = o.order_id
+WHERE shipped_date IS NOT NULL
+GROUP BY YEAR(shipped_date)
+order by [year];
+
+
+year        gross_sales
+----------- -----------
+2016        2649649.97
+2017        3725890.76
+2018        1062469.33
+
+(3 rows affected)
+
+----------------------------------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-datediff-function/
+SQL Server DATEDIFF Function
+To calculate the difference between two dates in years, months, weeks, etc., you use the DATEDIFF() function:
+
+
+DECLARE 
+    @start_dt DATETIME2= '2019-12-31 23:59:59.9999999', 
+    @end_dt DATETIME2= '2020-01-01 00:00:00.0000000';
+
+SELECT 
+    DATEDIFF(year, @start_dt, @end_dt) diff_in_year, 
+    DATEDIFF(quarter, @start_dt, @end_dt) diff_in_quarter, 
+    DATEDIFF(month, @start_dt, @end_dt) diff_in_month, 
+    DATEDIFF(dayofyear, @start_dt, @end_dt) diff_in_dayofyear, 
+    DATEDIFF(day, @start_dt, @end_dt) diff_in_day, 
+    DATEDIFF(week, @start_dt, @end_dt) diff_in_week, 
+    DATEDIFF(hour, @start_dt, @end_dt) diff_in_hour, 
+    DATEDIFF(minute, @start_dt, @end_dt) diff_in_minute, 
+    DATEDIFF(second, @start_dt, @end_dt) diff_in_second, 
+    DATEDIFF(millisecond, @start_dt, @end_dt) diff_in_millisecond;
+
+
+SELECT
+    order_id, 
+    required_date, 
+    shipped_date,
+    CASE
+        WHEN DATEDIFF(day, required_date, shipped_date) < 0
+        THEN 'Late'
+        ELSE 'OnTime'
+    END shipment
+FROM 
+    sales.orders
+WHERE 
+    shipped_date IS NOT NULL
+ORDER BY 
+    required_date;
+
+-----------------------------------------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-dateadd-function/
+SQL Server DATEADD Function
+The DATEADD() function adds a number to a specified date part of an input date and returns the modified value.
+
+SELECT 
+    DATEADD(second, 1, '2018-12-31 23:59:59') result;
+result
+-----------------------
+2019-01-01 00:00:00.000
+
+(1 row affected)
+
+SELECT 
+    DATEADD(day, 1, '2018-12-31 23:59:59') result;
+
+result
+-----------------------
+2019-01-01 23:59:59.000
+
+(1 row affected)
+
+
+SELECT 
+    order_id, 
+    customer_id, 
+    order_date,
+    DATEADD(day, 2, order_date) estimated_shipped_date
+FROM 
+    sales.orders
+WHERE 
+    shipped_date IS NULL
+ORDER BY 
+    estimated_shipped_date DESC;
+
+
+Handling month examples
+If you add a number of months to a date and the day of the date result does not exist, the DATEADD() function will return the last day of the return month.
+
+SELECT 
+    DATEADD(month, 4, '2019-05-31') AS result;
+
+result
+-----------------------
+2019-09-30 00:00:00.000
+
+(1 row affected)
+
+------------------------------------------------------
+https://www.sqlservertutorial.net/sql-server-date-functions/sql-server-eomonth-function/
+SQL Server EOMONTH Function
+
+The EOMONTH() function returns the last day of the month of a specified date, with an optional offset.
+
+SELECT 
+    EOMONTH('2019-02-15') end_of_month_feb2019;
+
+end_of_month_feb2019
+--------------------
+2019-02-28
+
+(1 row affected)
+
+SELECT
+    EOMONTH('2020-02-09') end_of_month_feb2020;
+
+end_of_month_feb2020
+--------------------
+2020-02-29
+
+(1 row affected)
+
+SELECT 
+    DAY(EOMONTH('2020-02-09')) days;
+
+days
+-----------
+29
+
+
+SELECT 
+    EOMONTH('2019-02-15', 2) eomonth_next_2_months;
+
+eomonth_next_2_months
+---------------------
+2019-04-30
+
+(1 row affected)
+
